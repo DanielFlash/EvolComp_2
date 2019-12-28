@@ -1,5 +1,5 @@
 """
-Traveller salesman problem
+Traveller salesman problem http://www.math.uwaterloo.ca/tsp/vlsi/index.html
 """
 import random
 import numpy as np
@@ -49,22 +49,45 @@ def plot_route(coordinates, order=None, is_route=True):
     plt.show()
 
 
-def evaluation(individual):
+class DistanceKeeper:
+    def __init__(self, coordinates):
+        self.distances = np.zeros((len(coordinates), len(coordinates)))
+        self.calculate_all_distances(coordinates)
+
+    def calculate_all_distances(self, coordinates):
+        for i in range(len(coordinates)):
+            for j in range(len(coordinates)):
+                self.distances[i, j] = \
+                    np.sqrt((abs(coordinates[i][0] - coordinates[j][0]) ** 2)
+                            + (abs(coordinates[i][1] - coordinates[j][1]) ** 2))
+
+
+def evaluation(dk, individual):
     distance = 0
     for i in range(len(individual) - 1):
-        distance += np.linalg.norm(individual[i] - individual[i+1])
+        # prev = coordinates[individual[i]]
+        # next = coordinates[individual[i + 1]]
+        # distance += np.linalg.norm(np.asarray(prev) - np.asarray(next))
+        # dist = np.sqrt((abs(prev[0] - next[0]) ** 2) + (abs(prev[1] - next[1]) ** 2))
+        dist = dk.distances[individual[i]][individual[i + 1]]
+        distance += dist
 
     return distance,
 
 
 class TravellerSalesmanProblemGA:
-    def __init__(self, coordinates, pop_size, generations, cross_prob, mut_prob):
-        self.pool = Pool(10)
+    def __init__(self, coordinates, pop_size, generations, cross_prob, mut_prob, dk):
+        self.pool = Pool(10)  # 10
         self.individual_size = len(coordinates)
         self.pop_size = pop_size
         self.generations = generations
         self.cross_prob = cross_prob
         self.mut_prob = mut_prob
+
+        self.dk = dk
+
+        self.current_iter = 0
+        self.step = abs(cross_prob - mut_prob) / (generations - 1000)
 
         random.seed(42)
         toolbox = base.Toolbox()
@@ -75,10 +98,10 @@ class TravellerSalesmanProblemGA:
         toolbox.register('indices', random.sample, range(self.individual_size), self.individual_size)
         toolbox.register('individual', tools.initIterate, creator.Individual, toolbox.indices)
         toolbox.register('population', tools.initRepeat, list, toolbox.individual)
-        toolbox.register('evaluate', evaluation)
+        toolbox.register('evaluate', evaluation, self.dk)
         toolbox.register('mate', tools.cxOrdered)
-        toolbox.register('mutate', tools.mutShuffleIndexes, indpb=0.1)  # 0.05
-        toolbox.register('select', tools.selTournament, tournsize=20)   # 10
+        toolbox.register('mutate', tools.mutShuffleIndexes, indpb=0.01)  # 0.05
+        toolbox.register('select', tools.selTournament, tournsize=30)   # 10
 
         self.toolbox = toolbox
 
@@ -91,24 +114,43 @@ class TravellerSalesmanProblemGA:
         stats.register('min', np.min)
         stats.register('max', np.max)
 
+        # self.current_iter += 1
+        # if self.current_iter > 1000 and self.cross_prob >= self.mut_prob:
+        #     cross_prob = self.cross_prob - self.current_iter * self.step
+        #     mut_prob = self.mut_prob + self.current_iter * self.step
+        # elif self.current_iter > 1000 and self.cross_prob < self.mut_prob:
+        #     cross_prob = self.cross_prob + self.current_iter * self.step
+        #     mut_prob = self.mut_prob - self.current_iter * self.step
+        # else:
+        #     cross_prob = self.cross_prob
+        #     mut_prob = self.mut_prob
+
+        cross_prob = self.cross_prob
+        mut_prob = self.mut_prob
+
         algorithms.eaMuPlusLambda(pop, self.toolbox, self.pop_size, self.pop_size,
-                                  self.cross_prob, self.mut_prob,
+                                  cross_prob, mut_prob,
                                   self.generations, stats=stats, halloffame=hof)
 
         return pop, stats, hof
 
 
 def main():
-    coordinates = data_reader('pma343')  # 564, 1019, 1368
-    pop_size = 300
-    generations = 500
-    cross_prob = 0.7    # 0.6; 0.15
-    mut_prob = 0.2      # 0.05; 0.5
+    coordinates = data_reader('xqg237')  # xqf131 - 564, xqg237 - 1019, pma343 - 1368
 
-    plot_route(coordinates, None, False)
+    print(f'Individual size: {len(coordinates)}')
+
+    pop_size = 200
+    generations = 2000
+    cross_prob = 0.5    # 0.6; 0.15; 0.7
+    mut_prob = 0.5      # 0.05; 0.5; 0.2
+
+    dk = DistanceKeeper(coordinates)
+
+    # plot_route(coordinates, None, False)
 
     model = TravellerSalesmanProblemGA(coordinates, pop_size,
-                                       generations, cross_prob, mut_prob)
+                                       generations, cross_prob, mut_prob, dk)
 
     pop, stats, hof = model()
 

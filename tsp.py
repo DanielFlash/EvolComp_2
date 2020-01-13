@@ -89,7 +89,7 @@ class TravellerSalesmanProblemGA:
         self.current_iter = 0
         self.step = abs(cross_prob - mut_prob) / (generations - 1000)
 
-        random.seed(42)
+        random.seed(39)
         toolbox = base.Toolbox()
         toolbox.register("map", self.pool.map)
 
@@ -100,8 +100,8 @@ class TravellerSalesmanProblemGA:
         toolbox.register('population', tools.initRepeat, list, toolbox.individual)
         toolbox.register('evaluate', evaluation, self.dk)
         toolbox.register('mate', tools.cxOrdered)
-        toolbox.register('mutate', tools.mutShuffleIndexes, indpb=0.01)  # 0.05
-        toolbox.register('select', tools.selTournament, tournsize=30)   # 10
+        toolbox.register('mutate', tools.mutShuffleIndexes, indpb=0.01)  # 0.05, 0.01
+        toolbox.register('select', tools.selTournament, tournsize=30)   # 10, 30, 4
 
         self.toolbox = toolbox
 
@@ -125,18 +125,18 @@ class TravellerSalesmanProblemGA:
         #     cross_prob = self.cross_prob
         #     mut_prob = self.mut_prob
 
-        cross_prob = self.cross_prob
-        mut_prob = self.mut_prob
-
         algorithms.eaMuPlusLambda(pop, self.toolbox, self.pop_size, self.pop_size,
-                                  cross_prob, mut_prob,
+                                  self.cross_prob, self.mut_prob,
                                   self.generations, stats=stats, halloffame=hof)
+
+        # algorithms.eaSimple(pop, self.toolbox, cxpb=0.7, mutpb=0.05,
+        #                     ngen=self.generations, stats=stats, halloffame=hof)
 
         return pop, stats, hof
 
 
 def main():
-    coordinates = data_reader('xqg237')  # xqf131 - 564, xqg237 - 1019, pma343 - 1368
+    coordinates = data_reader('xqf131')  # xqf131 - 564, xqg237 - 1019, pma343 - 1368
 
     print(f'Individual size: {len(coordinates)}')
 
